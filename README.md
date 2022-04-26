@@ -1,5 +1,5 @@
 # zerolog-sentry
-[![Build Status](https://travis-ci.org/archdx/zerolog-sentry.svg?branch=master)](https://travis-ci.org/archdx/zerolog-sentry)
+[![Build Status](https://travis-ci.org/TheClimbingHangar/zerolog-sentry.svg?branch=master)](https://travis-ci.org/TheClimbingHangar/zerolog-sentry)
 
 ### Example
 ```go
@@ -9,7 +9,7 @@ import (
 	stdlog "log"
 	"os"
 
-	"github.com/archdx/zerolog-sentry"
+	"github.com/TheClimbingHangar/zerolog-sentry"
 	"github.com/rs/zerolog"
 )
 

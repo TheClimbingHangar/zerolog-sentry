@@ -24,8 +24,7 @@ var _ = io.WriteCloser(new(Writer))
 var now = time.Now
 
 type Writer struct {
-	client *sentry.Client
-
+	hub          *sentry.Hub
 	levels       map[zerolog.Level]struct{}
 	flushTimeout time.Duration
 }
@@ -33,10 +32,10 @@ type Writer struct {
 func (w *Writer) Write(data []byte) (int, error) {
 	event, ok := w.parseLogEvent(data)
 	if ok {
-		w.client.CaptureEvent(event, nil, nil)
+		w.hub.CaptureEvent(event)
 		// should flush before os.Exit
 		if event.Level == sentry.LevelFatal {
-			w.client.Flush(w.flushTimeout)
+			w.hub.Flush(w.flushTimeout)
 		}
 	}
 
@@ -44,7 +43,7 @@ func (w *Writer) Write(data []byte) (int, error) {
 }
 
 func (w *Writer) Close() error {
-	w.client.Flush(w.flushTimeout)
+	w.hub.Flush(w.flushTimeout)
 	return nil
 }
 
@@ -150,6 +149,7 @@ type config struct {
 	release      string
 	environment  string
 	serverName   string
+	tags         map[string]string
 	debug        bool
 	flushTimeout time.Duration
 }
@@ -194,6 +194,13 @@ func WithDebug() WriterOption {
 	})
 }
 
+// WithTags configures additional tags for the scope
+func WithTags(tags map[string]string) WriterOption {
+	return optionFunc(func(cfg *config) {
+		cfg.tags = tags
+	})
+}
+
 func New(dsn string, opts ...WriterOption) (*Writer, error) {
 	cfg := newDefaultConfig()
 	for _, opt := range opts {
@@ -213,13 +220,19 @@ func New(dsn string, opts ...WriterOption) (*Writer, error) {
 		return nil, err
 	}
 
+	hub := sentry.NewHub(client, sentry.NewScope())
+
+	hub.ConfigureScope(func(scope *sentry.Scope) {
+		scope.SetTags(cfg.tags)
+	})
+
 	levels := make(map[zerolog.Level]struct{}, len(cfg.levels))
 	for _, lvl := range cfg.levels {
 		levels[lvl] = struct{}{}
 	}
 
 	return &Writer{
-		client:       client,
+		hub:          hub,
 		levels:       levels,
 		flushTimeout: cfg.flushTimeout,
 	}, nil
