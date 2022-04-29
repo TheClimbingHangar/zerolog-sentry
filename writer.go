@@ -149,6 +149,8 @@ type config struct {
 	release      string
 	environment  string
 	serverName   string
+	ctxHeader    string
+	context      map[string]interface{}
 	tags         map[string]string
 	debug        bool
 	flushTimeout time.Duration
@@ -201,6 +203,14 @@ func WithTags(tags map[string]string) WriterOption {
 	})
 }
 
+// WithContext configures sentry context section for the scope
+func WithContext(header string, context map[string]interface{}) WriterOption {
+	return optionFunc(func(cfg *config) {
+		cfg.ctxHeader = header
+		cfg.context = context
+	})
+}
+
 func New(dsn string, opts ...WriterOption) (*Writer, error) {
 	cfg := newDefaultConfig()
 	for _, opt := range opts {
@@ -224,6 +234,7 @@ func New(dsn string, opts ...WriterOption) (*Writer, error) {
 
 	hub.ConfigureScope(func(scope *sentry.Scope) {
 		scope.SetTags(cfg.tags)
+		scope.SetContext(cfg.ctxHeader, cfg.context)
 	})
 
 	levels := make(map[zerolog.Level]struct{}, len(cfg.levels))
